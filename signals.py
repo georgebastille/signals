@@ -1,12 +1,18 @@
 import pandas as pd
 import datetime
 from collections import defaultdict
+from supertrend.Indicators.Super_Trend import ST
+
+
+ohlc_dict = {'Open':'first', 'High':'max', 'Low':'min', 'Close': 'last'}
+
 
 loaded = {}
 
-def load_ticker(ticker):
-    if ticker in loaded:
-        return loaded[ticker]
+def load_ticker(ticker, sample_mins=None):
+    if (ticker, sample_mins) in loaded:
+        return loaded[(ticker, sample_mins)]
+    
     filename = f"./csv/{ticker}.csv"
     #print(f"Loading {filename}")
     df = pd.read_csv(filename, 
@@ -20,9 +26,21 @@ def load_ticker(ticker):
     # So I need to adjust the forex time to be one hour backwards
     df = df.set_index(df.index.values - pd.Timedelta(hours=1))
     df.sort_index(inplace=True)
-    loaded[ticker] = df
+    if sample_mins:
+        df = df.resample(f"{sample_mins}Min").apply(ohlc_dict).dropna()
+
+    loaded[(ticker, sample_mins)] = df
     return df
-                
+
+supertrends = {}
+
+def get_supertrend(ticker, multiplier, length, sample_mins=None):
+    if (ticker, sample_mins, multiplier, length) in supertrends:
+        return supertrends[(ticker, sample_mins, multiplier, length)]
+    df = load_ticker(ticker, sample_mins)
+    dfs = ST(df, multiplier, length)[["Open","High","Low","Close","SuperTrend","SuperTrendType"]]
+    supertrends[(ticker, sample_mins, multiplier, length)] = dfs
+    return dfs           
     
 class Signal:
     def __init__(self, ticker, datetime_str, entry_price, stop_loss, take_profit):
