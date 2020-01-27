@@ -50,18 +50,20 @@ def get_supertrend(ticker, multiplier, length, sample_mins=None):
     return dfs           
     
 class Signal:
-    def __init__(self, ticker, datetime_str, entry_price, stop_loss, take_profit):
+    def __init__(self, ticker, datetime_str, entry_price, stop_loss, take_profit, text=None):
         # Signal time needs to be in the format '2020-02-01 19:34'
         self.datetime_str = datetime_str
         #self.signal_time = datetime.datetime.strptime(datetime_str, '%Y-%m-%d %H:%M')
         self.entry_price = float(entry_price)
+        self.real_entry_price = self.entry_price
         self.stop_loss = float(stop_loss)
         self.take_profit = float(take_profit)
         self.type = "BUY" if entry_price > stop_loss else "SELL"
         self.ticker = ticker
+        self.text = text
         
     def __str__(self):
-        return f"{self.ticker}: {self.datetime_str}: Entry: {self.entry_price}, SL: {self.stop_loss}, TP: {self.take_profit}"
+        return f"{self.ticker}: {self.datetime_str}: Entry: {self.real_entry_price:.5f}, SL: {self.stop_loss:.5f}, TP: {self.take_profit:.5f}"
         
     def set_stop_loss_pips(self, new_stop_loss):
         stop_loss_pair_val = new_stop_loss / pip_factor(self.ticker)
@@ -126,10 +128,15 @@ def parse_beta_signal(date_time, text):
         except Exception as ex:
             print(ex)
     if ticker and entry_price and stop_loss:
-        return Signal(ticker, date_time, entry_price, stop_loss, 0.0)
+        return Signal(ticker, date_time, entry_price, stop_loss, 0.0, text)
     return None
 
-def load_beta_trades(telegram_filename):
+cached_signals = None
+
+def load_beta_trades(telegram_filename, slippage=10):
+    global cached_signals
+    if cached_signals:
+        return cached_signals
     with open(telegram_filename) as d:
         dump = json.load(d)
     beta = dump["chats"]["list"][2]["messages"]
@@ -140,7 +147,20 @@ def load_beta_trades(telegram_filename):
         if "ENTRADA" in m["text"].upper():
             signal = parse_beta_signal(m['date'], m['text'])
             if signal:
-                signals.append(signal)
+                df = load_ticker(signal.ticker)
+                if df is not None:
+                    # Load the actual entry price for this date from our data
+                    # It looks like Beta sometimes gets it wrong
+                    ohlc_values = df.loc[signal.datetime_str:].iterrows()
+                    _, first_ohlc = next(ohlc_values)
+                    signal.real_entry_price = first_ohlc.Open
+                    if abs(signal.entry_price - signal.real_entry_price) * pip_factor(signal.ticker) < slippage:
+                        signals.append(signal)
+                    else:
+                        print(f"Slippage to high for: {signal}")
+                else:
+                    print(f"Could not load ticker: {signal.ticker}")
+    cached_signals = signals
     return signals
 
 
