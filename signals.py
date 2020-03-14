@@ -1,9 +1,9 @@
 import pandas as pd
 import datetime
 from collections import defaultdict
-from supertrend.Indicators.Super_Trend import ST
-import json
+from indicators.indicator.indicators import SuperTrend
 from datetime import datetime
+import json
 
 
 ohlc_dict = {'Open':'first', 'High':'max', 'Low':'min', 'Close': 'last'}
@@ -36,18 +36,7 @@ def load_ticker(ticker, sample_mins=None):
         return df
     except:
         return None
-
-supertrends = {}
-
-def get_supertrend(ticker, multiplier, length, sample_mins=None):
-    if (ticker, sample_mins, multiplier, length) in supertrends:
-        return supertrends[(ticker, sample_mins, multiplier, length)]
-    df = load_ticker(ticker, sample_mins)
-    if df is None:
-        return None
-    dfs = ST(df, multiplier, length)[["Open","High","Low","Close","SuperTrend","SuperTrendType"]]
-    supertrends[(ticker, sample_mins, multiplier, length)] = dfs
-    return dfs           
+    
     
 class Signal:
     def __init__(self, ticker, datetime_str, entry_price, stop_loss, take_profit, text=None):
@@ -137,9 +126,12 @@ def load_beta_trades(telegram_filename, slippage=10):
     global cached_signals
     if cached_signals:
         return cached_signals
+    print("Loading Trades...")
+    slip = 0
+    bad_ticker = 0
     with open(telegram_filename) as d:
         dump = json.load(d)
-    beta = dump["chats"]["list"][2]["messages"]
+    beta = dump["chats"]["list"][0]["messages"]
     signals = []
     for m in beta:
         if not isinstance(m['text'], str):
@@ -157,10 +149,13 @@ def load_beta_trades(telegram_filename, slippage=10):
                     if abs(signal.entry_price - signal.real_entry_price) * pip_factor(signal.ticker) < slippage:
                         signals.append(signal)
                     else:
-                        print(f"Slippage to high for: {signal}")
+                        #print(f"Slippage to high for: {signal}")
+                        slip += 1
                 else:
-                    print(f"Could not load ticker: {signal.ticker}")
+                    #print(f"Could not load ticker: {signal.ticker}")
+                    bad_ticker += 1
     cached_signals = signals
+    print(f"Loaded {len(signals)} signal, failed: Slippage = {slip}, Unknown ticker = {bad_ticker}")
     return signals
 
 
