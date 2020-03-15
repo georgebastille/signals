@@ -1,6 +1,3 @@
-[submodule "supertrend"]
-	path = supertrend
-	url = https://github.com/techietrader/Trading-indicators-and-Chart-patterns.git
 [submodule "indicators"]
 	path = indicators
 	url = https://github.com/georgebastille/Technical-Indicators.git
