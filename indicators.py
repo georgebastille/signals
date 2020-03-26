@@ -153,7 +153,7 @@ def EMA(df, base, target, period, alpha=False):
     return df
 
 
-def ATR(df, period, prefix=None, ohlc=["Open", "High", "Low", "Close"]):
+def ATR(df, period, ohlc=["Open", "High", "Low", "Close"]):
     """
     Function to compute Average True Range (ATR)
     
@@ -167,16 +167,6 @@ def ATR(df, period, prefix=None, ohlc=["Open", "High", "Low", "Close"]):
             True Range (TR)
             ATR (ATR_$period)
     """
-    
-    if prefix:
-        st_prefix = str(prefix) + "_"
-    else:
-        st_prefix = ""
-        
-    atr = st_prefix + "ATR_" + str(period)
-
-    if atr in df.columns:
-        return df
 
     # Compute true range only if it is not computed and stored earlier in the df
     if not "TR" in df.columns:
@@ -189,12 +179,12 @@ def ATR(df, period, prefix=None, ohlc=["Open", "High", "Low", "Close"]):
         df.drop(["h-l", "h-yc", "l-yc"], inplace=True, axis=1)
 
     # Compute EMA of true range using ATR formula after ignoring first row
-    EMA(df, "TR", atr, period, alpha=True)
+    EMA(df, "TR", "ATR", period, alpha=True)
 
     return df
 
 
-def SuperTrend(df, period, multiplier, prefix=None, ohlc=["Open", "High", "Low", "Close"]):
+def SuperTrend(df, period, multiplier, ohlc=["Open", "High", "Low", "Close"]):
     """
     Function to compute SuperTrend
     
@@ -210,19 +200,12 @@ def SuperTrend(df, period, multiplier, prefix=None, ohlc=["Open", "High", "Low",
             SuperTrend (ST_$period_$multiplier)
             SuperTrend Direction (STX_$period_$multiplier)
     """
-    if prefix:
-        st_prefix = str(prefix) + "_"
-    else:
-        st_prefix = ""
         
-    atr = st_prefix + "ATR_" + str(period)
-    st = st_prefix + "ST_" + str(period) + "_" + str(multiplier)
-    stx = st_prefix + "STX_" + str(period) + "_" + str(multiplier)
-    
-    if stx in df.columns:
-        return df
+    atr = "ATR"
+    st = "ST"
+    stx = "STX"
 
-    ATR(df, period, prefix=prefix, ohlc=ohlc)
+    ATR(df, period, ohlc=ohlc)
 
     """
     SuperTrend Algorithm :
@@ -292,6 +275,14 @@ def SuperTrend(df, period, multiplier, prefix=None, ohlc=["Open", "High", "Low",
     # Remove basic and final bands from the columns
     df.drop(["basic_ub", "basic_lb", "final_ub", "final_lb"], inplace=True, axis=1)
 
+    df.fillna(0, inplace=True)
+
+    return df
+
+# Commodity Channel Index 
+def CCI(df, ndays): 
+    TP = (df['High'] + df['Low'] + df['Close']) / 3 
+    df['CCI'] = (TP - TP.rolling(ndays).mean()) / (0.015 * TP.rolling(ndays).std())
     df.fillna(0, inplace=True)
 
     return df
