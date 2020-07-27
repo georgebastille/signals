@@ -1,2 +1,8 @@
 pandas
 plotly
+keras
+tensorflow
+pandas
+matplotlib
+jupyter
+notebook
