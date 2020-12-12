@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 import datetime
-import zipfile
 import urllib.request
+import zipfile
 from pathlib import Path
+
 import pandas as pd
 
 ohlc_dict = {"Open": "first", "High": "max", "Low": "min", "Close": "last"}
@@ -76,6 +77,7 @@ if __name__ == "__main__":
     print("Downloads forex data from forexite for the last 10 years.")
     print("- Skips files already downloaded (can be run everyday)")
     print("- Converts files from one-day-per-file to one-ticker-per-file")
+    num_years = 1
 
     date = datetime.datetime.now()
     # example forexite.com data url:
@@ -84,7 +86,7 @@ if __name__ == "__main__":
     filename = "./forexite/{:04d}-{:02d}-{:02d}.zip"
     new_files = []
 
-    for x in range(1, 7 * 365):
+    for x in range(1, num_years * 365):
         data_date = date - datetime.timedelta(days=x)
         year = data_date.year
         year_2 = int(str(year)[-2:])
